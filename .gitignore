@@ -1,5 +1,5 @@
-.symbl.config
+symbl.config
 node_modules/
-.index.js
-.test.js
-.web_form_fill.py
+index.js
+test.js
+web_form_fill.py
