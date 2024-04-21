@@ -28,7 +28,7 @@ async function getAccessToken() {
 
 function handle_mic(ws) {
   const micInstance = mic({
-    rate: 16000,
+    rate: 8000,
     channels: '1',
     debug: false,
     exitOnSilence: 6,
@@ -37,7 +37,7 @@ function handle_mic(ws) {
   const micInputStream = micInstance.getAudioStream();
 
   micInputStream.on('data', (audioChunk) => {
-    const chunkSize = 8192; // Size of chunk to be sent
+    const chunkSize = 4096; // Size of chunk to be sent
     // Assuming audioChunk is already a Buffer, no need to convert from hex
     const rawData = audioChunk;
     for (let i = 0; i < rawData.length; i += chunkSize) {
