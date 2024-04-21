@@ -1,74 +1,12 @@
-import { config } from 'dotenv';
-import { v4 as uuid } from 'uuid';
+
 import WebSocket from 'ws';
 import mic from 'mic';
-import { AuthToken } from './auth.js';
+import { config } from 'dotenv';
+import { v4 as uuid } from 'uuid';
+import { MicrophoneHandler } from './utils/mic_handler.js'
+import { AuthToken } from './utils/auth.js';
 
-
-const id = uuid();
-let conversationId;
-console.log('running the script')
-function handle_mic(ws) {
-  const micInstance = mic({
-    rate: 8000,
-    channels: '1',
-    debug: false,
-    exitOnSilence: 6,
-  });
-
-  const micInputStream = micInstance.getAudioStream();
-
-  micInputStream.on('data', (audioChunk) => {
-    const chunkSize = 4096; // Size of chunk to be sent
-    // Assuming audioChunk is already a Buffer, no need to convert from hex
-    const rawData = audioChunk;
-    for (let i = 0; i < rawData.length; i += chunkSize) {
-      const end = Math.min(i + chunkSize, rawData.length);
-      const chunk = rawData.slice(i, end);
-      ws.send(chunk, { binary: true }); // Sending each chunk over WebSocket
-    }
-  });
-  micInstance.start();
-
-  micInputStream.on('error', function (err) {
-    console.error('Error in Input Stream:', err);
-  });
-
-  micInputStream.on('startComplete', function () {
-    console.log('Started listening to Microphone.');
-  });
-
-  micInputStream.on('silence', function () {
-    console.log('Got SIGNAL silence');
-  });
-}
-
-function handleRecognitionResult(data) {
-      // Extract relevant information from the recognition result message
-      const isFinal = data.message.isFinal;
-      const alternatives = data.message.payload.raw.alternatives;
-      const punctuatedTranscript = data.message.punctuated.transcript;
-      const user = data.message.user;
-  
-      // Process the recognition result based on your requirements
-      console.log('Received recognition result:');
-      console.log('Is Final:', isFinal);
-      console.log('Punctuated Transcript:', punctuatedTranscript);
-      console.log('User ID:', user.userId);
-      console.log('User Name:', user.name);
-  
-      // If the result is final, you can use the punctuated transcript
-      if (isFinal) {
-        console.log('Definitive Transcript:', punctuatedTranscript);
-        setTimeout(() => {}, 2000);
-      } else {
-          // If the result is not final, you might want to consider
-          // waiting for the final result before logging the definitive transcript
-          console.log('Waiting for the final result to generate definitive transcript.');
-      }
-}
-
-async function sendStartRequest(apiUrl) {
+async function handleWebSocketConnection(apiUrl, mic) {
     try {
       const ws = new WebSocket(apiUrl);
 
@@ -121,7 +59,7 @@ async function sendStartRequest(apiUrl) {
             console.log("Recognition Started. Ready to Process Audio!!!!")
             // Here I will be handling the audio transforming to binaries(chunks) to send it to the websocket
             // It keeps waiting on this stage until we send an audio or it times out (check this further)
-            handle_mic(ws);
+            mic.handleAudioStream(ws);
             // ws.send(JSON.stringify(data));
           }
           else if (data && data.message.type == 'recognition_result') {
@@ -156,12 +94,22 @@ async function sendStartRequest(apiUrl) {
 }
 
 //I RUN EVERYTHING HERE
+console.log('running the script')
+const id = uuid();
+let conversationId;
 config(); //getting access to dotenv variables
+const micOptions = {
+  rate: 8000,
+  channels: '1',
+  debug: false,
+  exitOnSilence: 6,
+};
 const authToken = new AuthToken(process.env.APP_ID, process.env.APP_SECRET);
 const accessToken = await authToken.getAccessToken();
 const apiUrl = `wss://api.symbl.ai/v1/streaming/${id}?access_token=${accessToken}`;
+const micHandler = new MicrophoneHandler(micOptions);
 console.log('starting the WebSocket requests')
-sendStartRequest(apiUrl);
+handleWebSocketConnection(apiUrl, micHandler);
 
 
 
@@ -193,3 +141,28 @@ sendStartRequest(apiUrl);
 // }, {connect: ':connect'})
 //   .then(({ data }) => console.log(data))
 //   .catch(err => console.error(err));
+
+// function handleRecognitionResult(data) {
+//       // Extract relevant information from the recognition result message
+//       const isFinal = data.message.isFinal;
+//       const alternatives = data.message.payload.raw.alternatives;
+//       const punctuatedTranscript = data.message.punctuated.transcript;
+//       const user = data.message.user;
+  
+//       // Process the recognition result based on your requirements
+//       console.log('Received recognition result:');
+//       console.log('Is Final:', isFinal);
+//       console.log('Punctuated Transcript:', punctuatedTranscript);
+//       console.log('User ID:', user.userId);
+//       console.log('User Name:', user.name);
+  
+//       // If the result is final, you can use the punctuated transcript
+//       if (isFinal) {
+//         console.log('Definitive Transcript:', punctuatedTranscript);
+//         setTimeout(() => {}, 2000);
+//       } else {
+//           // If the result is not final, you might want to consider
+//           // waiting for the final result before logging the definitive transcript
+//           console.log('Waiting for the final result to generate definitive transcript.');
+//       }
+// }
