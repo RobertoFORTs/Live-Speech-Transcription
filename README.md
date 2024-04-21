@@ -11,5 +11,5 @@ Follow this steps:
 ## Running the code
 In the root directory:
   ```
-  node a_try_streaming_api
+  node a_try_streaming_api.js
   ```
