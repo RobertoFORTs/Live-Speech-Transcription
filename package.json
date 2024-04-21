@@ -2,6 +2,7 @@
   "dependencies": {
     "@symblai/symbl-js": "^1.4.8",
     "axios": "^1.6.8",
+    "dotenv": "^16.4.5",
     "node-fetch": "^3.3.2",
     "node-microphone": "^0.1.6",
     "node-record-lpcm16": "^1.0.1",

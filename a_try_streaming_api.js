@@ -1,31 +1,13 @@
-import fetch from 'node-fetch'
+import { config } from 'dotenv';
 import { v4 as uuid } from 'uuid';
 import WebSocket from 'ws';
 import mic from 'mic';
+import { AuthToken } from './auth.js';
 
 
 const id = uuid();
-const appId = '6a7a35426f52716373754a7247626b4e4562477a48676248464a686a4b626c44'
-const appSecret = '4f675f567373456347574c487148734c62437067444575626358473655394963647033624f4250556451514949424b5431504f375a41303254595f486f346e67'
 let conversationId;
 console.log('running the script')
-async function getAccessToken() {
-  const fetchResponse = await fetch('https://api.symbl.ai/oauth2/token:generate', {
-    method: 'post',
-    headers: {
-      'Content-Type': "application/json",
-    },
-    body: JSON.stringify({
-      type: 'application',
-      appId: appId,
-      appSecret: appSecret
-    })
-  });
-  const responseBody = await fetchResponse.json();
-  const accessToken = responseBody['accessToken'];
-  return accessToken;
-}
-
 function handle_mic(ws) {
   const micInstance = mic({
     rate: 8000,
@@ -174,8 +156,9 @@ async function sendStartRequest(apiUrl) {
 }
 
 //I RUN EVERYTHING HERE
-
-const accessToken = await getAccessToken();
+config(); //getting access to dotenv variables
+const authToken = new AuthToken(process.env.APP_ID, process.env.APP_SECRET);
+const accessToken = await authToken.getAccessToken();
 const apiUrl = `wss://api.symbl.ai/v1/streaming/${id}?access_token=${accessToken}`;
 console.log('starting the WebSocket requests')
 sendStartRequest(apiUrl);
