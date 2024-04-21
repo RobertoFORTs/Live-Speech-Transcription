@@ -1,6 +1,5 @@
 
 import WebSocket from 'ws';
-import mic from 'mic';
 import { config } from 'dotenv';
 import { v4 as uuid } from 'uuid';
 import { MicrophoneHandler } from './utils/mic_handler.js'
@@ -104,10 +103,10 @@ const micOptions = {
   debug: false,
   exitOnSilence: 6,
 };
+const micHandler = new MicrophoneHandler(micOptions);
 const authToken = new AuthToken(process.env.APP_ID, process.env.APP_SECRET);
 const accessToken = await authToken.getAccessToken();
 const apiUrl = `wss://api.symbl.ai/v1/streaming/${id}?access_token=${accessToken}`;
-const micHandler = new MicrophoneHandler(micOptions);
 console.log('starting the WebSocket requests')
 handleWebSocketConnection(apiUrl, micHandler);
 
