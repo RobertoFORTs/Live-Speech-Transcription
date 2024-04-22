@@ -5,19 +5,19 @@ import { v4 as uuid } from 'uuid';
 import { MicrophoneHandler } from './utils/mic_handler.js'
 import { AuthToken } from './utils/auth.js';
 
-async function handleWebSocketConnection(apiUrl, mic) {
+async function handleWebSocketConnection(apiUrl, mic, presetTargets) {
     try {
       const ws = new WebSocket(apiUrl);
 
       ws.on('open', () => {
           console.log('WebSocket connection established.');
-          
+
           // Construct the start_request message
           const startRequest = {
               type: 'start_request',
               config: {
                   confidenceThreshold: 0.7,
-                  detectEntities: false,
+                  detectEntities: true,
                   languageCode: 'en-US',
                   meetingTitle: 'My Test Meeting',
                   sentiment: false,
@@ -30,12 +30,12 @@ async function handleWebSocketConnection(apiUrl, mic) {
                 //disconnectOnStopRequestTimeout defines timout for closing the webSocket (default is also max 30min)
                 //insightTypes can be either question or action_item -- Its an array of strings
                 //noConnectionTimeout makes the webSocket be open for the time passed
-                //speaker speaker name and id object 
+                //speaker speaker name and id object
                 //trackers is an optional object to enable trackers, if not defined, there is a default config
                 //actions as sendSummary by email (The only action supported)
               },
           };
-          
+
         // Send the start_request message as JSON string
         ws.send(JSON.stringify(startRequest));
         // Check How to Handle and Send the Stop Request effectively
@@ -62,7 +62,7 @@ async function handleWebSocketConnection(apiUrl, mic) {
             // ws.send(JSON.stringify(data));
           }
           else if (data && data.message.type == 'recognition_result') {
-            console.log("This Is the Result of the Recognition")
+            // console.log("This Is the Result of the Recognition")
             console.log(data.message);
             // Handling Multiple Results of recognitions until I get a meaningful message!!
             // handleRecognitionResult(data);
@@ -79,9 +79,26 @@ async function handleWebSocketConnection(apiUrl, mic) {
           data.messages.forEach((message) => {
             console.log(message.payload.content);
           });
-          //here handles the printing probably 
+          //here handles the printing probably
         }
-        
+        else if (data.type === 'entity_response') {
+          if (data.entities) {
+            let filteredMatches = [];
+            data.entities.forEach((entity) => {
+              //console.log("Entity:", entity); 
+              if (presetTargets.includes(entity.subType)) {
+                // Push individual matches into the filteredMatches array
+                entity.matches.forEach((match) => {
+                  filteredMatches.push(match);
+                });
+              }
+            });
+            filteredMatches.forEach((match) => {
+              console.log('Entity Detected:', match.detectedValue);
+            });
+          }
+        }
+
       });
 
         ws.on('error', (error) => {
@@ -103,12 +120,13 @@ const micOptions = {
   debug: false,
   exitOnSilence: 6,
 };
+const presetTargets = ['Time', 'Date', 'Location_Country', 'Person_Name'];
 const micHandler = new MicrophoneHandler(micOptions);
 const authToken = new AuthToken(process.env.APP_ID, process.env.APP_SECRET);
 const accessToken = await authToken.getAccessToken();
 const apiUrl = `wss://api.symbl.ai/v1/streaming/${id}?access_token=${accessToken}`;
 console.log('starting the WebSocket requests')
-handleWebSocketConnection(apiUrl, micHandler);
+handleWebSocketConnection(apiUrl, micHandler, presetTargets);
 
 
 
@@ -147,14 +165,14 @@ handleWebSocketConnection(apiUrl, micHandler);
 //       const alternatives = data.message.payload.raw.alternatives;
 //       const punctuatedTranscript = data.message.punctuated.transcript;
 //       const user = data.message.user;
-  
+
 //       // Process the recognition result based on your requirements
 //       console.log('Received recognition result:');
 //       console.log('Is Final:', isFinal);
 //       console.log('Punctuated Transcript:', punctuatedTranscript);
 //       console.log('User ID:', user.userId);
 //       console.log('User Name:', user.name);
-  
+
 //       // If the result is final, you can use the punctuated transcript
 //       if (isFinal) {
 //         console.log('Definitive Transcript:', punctuatedTranscript);
